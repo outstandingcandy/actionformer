@@ -1,0 +1,123 @@
+# 二分类羽毛球数据集配置 (发球 vs 非发球)
+dataset_name: "badminton_new"
+train_split: ['train']
+val_split: ['val']
+
+# 数据路径配置
+dataset:
+  json_file: "data/actionformer_badminton_binary_25fps/badminton_annotations.json"
+  feat_folder: "data/actionformer_badminton_binary_25fps/features"
+  file_ext: ".npy"
+  
+  # 数据分割配置
+  split_file: "data/actionformer_badminton_binary_25fps/splits.json"
+  
+  # 特征配置
+  feat_stride: 1
+  num_frames: 16
+  default_fps: 25.0
+  feat_offset: 8.0
+  
+  # 序列长度限制
+  max_seq_len: 256  # 增加以支持更长视频
+  
+  # 数据增强
+  input_dim: 1024  # SwinV2-Base 384特征维度
+  num_classes: 2   # 二分类：发球(0) vs 非发球(1)
+  
+  # 其他配置
+  remove_duplicate: false
+  trim_method: "truncate"
+  force_upsampling: false
+  trunc_thresh: 0.5
+
+# model config
+model_name: "LocPointTransformer"
+model:
+  # 基础配置
+  input_dim: 1024  # SwinV2-Base 384特征维度
+  num_classes: 2   # 二分类
+  max_seq_len: 256
+  
+  # 训练配置
+  train_cfg:
+    # 损失配置
+    init_loss_norm: 1000
+    loss_normalizer_momentum: 0.9
+    loss_weight: 0.0  # 自动计算
+    
+    # 分类配置
+    cls_prior_prob: 0.1  # 提高正样本先验概率
+    label_smoothing: 0.1
+    
+    # 中心采样配置
+    center_sample: radius
+    center_sample_radius: 1.5
+    
+    # 正则化
+    dropout: 0.1
+    droppath: 0.1
+    
+    # 空类别
+    head_empty_cls: []
+  
+  # 测试配置
+  test_cfg:
+    pre_nms_thresh: 0.001
+    pre_nms_topk: 5000
+    iou_threshold: 0.9
+    min_score: 0.001
+    max_seg_num: 2000
+    nms_method: soft
+    duration_thresh: 0.05
+    multiclass_nms: True
+    nms_sigma: 0.9
+    voting_thresh: 0.95
+
+# 网络架构配置
+backbone_type: convTransformer
+fpn_type: identity
+backbone_arch: [2, 2, 5]
+scale_factor: 2
+max_buffer_len_factor: 6.0
+n_head: 4
+n_mha_win_size: -1
+embd_kernel_size: 3
+embd_dim: 512
+embd_with_ln: True
+fpn_dim: 512
+fpn_with_ln: True
+fpn_start_level: 0
+head_dim: 512
+regression_range: [[0, 4], [4, 8], [8, 16], [16, 32], [32, 64], [64, 10000]]
+head_num_layers: 3
+head_kernel_size: 3
+head_with_ln: True
+use_abs_pe: True
+use_rel_pe: False
+
+# 优化器配置
+opt:
+  learning_rate: 0.0001
+  epochs: 160
+  weight_decay: 0.05
+  warmup_epochs: 20  # 增加warmup
+  lr_schedule: cosine
+  clip_grad_l2norm: 1.0
+
+# 数据加载器配置
+loader:
+  batch_size: 4
+  num_workers: 4
+  pin_memory: True
+  drop_last: True
+
+# 训练评估配置
+train_eval_cfg:
+  eval_freq: 5
+  save_detailed: true
+  max_batches: 2  # 只评估前2个batch
+
+# 输出配置
+output_folder: "./ckpt/"
+print_freq: 1

@@ -1,0 +1,79 @@
+# ActivityNet + Uniformer 配置文件
+# Uniformer 特征维度: 1024
+
+dataset_name: anet
+train_split: ['training']
+val_split: ['validation']
+
+dataset: {
+  json_file: ./data/activitynet_hf/activity_net.v1-3.min.json,
+  feat_folder: ./data/activitynet_features,
+  file_prefix: v_,
+  file_ext: .npy,
+  num_classes: 200,
+  input_dim: 1024,  # Uniformer 特征维度
+  feat_stride: 8,   # Uniformer 的时序步长
+  num_frames: 8,    # Uniformer 处理的帧数
+  default_fps: 25,
+  trunc_thresh: 0.5,
+  crop_ratio: [0.9, 1.0],
+  # 上采样到固定长度
+  max_seq_len: 192,
+  force_upsampling: True,
+  downsample_rate: 1,
+}
+
+model: {
+  fpn_type: identity,
+  max_buffer_len_factor: 1.0,
+  # 多头注意力窗口大小
+  n_mha_win_size: [7, 7, 7, 7, 7, -1],
+  n_head: 4,
+  embd_dim: 256,
+  fpn_dim: 256,
+  head_dim: 256,
+  use_abs_pe: True,
+  # regression range
+  regression_range: [[0, 4], [4, 8], [8, 16], [16, 32], [32, 64], [64, 10000]],
+}
+
+opt: {
+  learning_rate: 0.001,
+  epochs: 15,
+  weight_decay: 0.05,
+  warmup: True,
+  warmup_epochs: 5,
+  schedule_type: 'cosine',
+  schedule_steps: [],
+  schedule_gamma: 0.1,
+}
+
+loader: {
+  batch_size: 8,  # Uniformer 特征较大，使用较小的 batch size
+  num_workers: 4,
+}
+
+train_cfg: {
+  init_loss_norm: 200,
+  clip_grad_l2norm: 1.0,
+  cls_prior_prob: 0.01,
+  center_sample: radius,
+  center_sample_radius: 1.5,
+  label_smoothing: 0.1,
+  droppath: 0.1,
+  loss_weight: 2.0,
+}
+
+test_cfg: {
+  voting_thresh: 0.9,
+  pre_nms_topk: 2000,
+  max_seg_num: 100,  # 每个视频最多 100 个预测
+  min_score: 0.001,
+  multiclass_nms: False,
+  nms_sigma: 0.75,
+  duration_thresh: 0.001,
+  ext_score_file: null,  # 外部分类器分数（可选）
+}
+
+output_folder: ./ckpt/
+

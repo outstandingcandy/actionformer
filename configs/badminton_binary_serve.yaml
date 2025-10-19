@@ -1,0 +1,123 @@
+# ActionFormer config for badminton serve detection (Binary Classification)
+# 二分类任务：发球检测
+
+# dataset config
+dataset_name: "badminton_new"  # 使用已注册的数据集类
+train_split: ["train"]
+val_split: ["val"]
+test_split: ["val"]
+
+dataset:
+  # 数据路径配置
+  json_file: "/data/badminton/actionformer_badminton_binary_serve/badminton_annotations.json"
+  feat_folder: "/data/badminton/badminton_uniformer_features_32_4/features"
+  file_ext: ".npy"
+  
+  # 数据分割配置
+  split_file: "/data/badminton/actionformer_badminton_binary_serve/splits.json"
+  
+  # 特征配置
+  feat_stride: 4
+  num_frames: 32
+  default_fps: 25
+  feat_offset: 0
+  
+  # 序列长度限制
+  max_seq_len: 256
+  
+  # 数据增强
+  input_dim: 1024
+  num_classes: 1  # 单类检测：只检测发球
+  
+  # 其他配置
+  remove_duplicate: false
+  trim_method: "truncate"
+  force_upsampling: false
+
+# model config
+model_name: "LocPointTransformer"
+model:
+  # 基础配置
+  input_dim: 1024
+  num_classes: 1  # 单类检测：只检测发球
+  max_seq_len: 1024
+  
+  # 训练配置
+  train_cfg:
+    # 损失配置
+    init_loss_norm: 100  # 二分类，降低
+    loss_normalizer_momentum: 0.9
+    
+    # 梯度配置
+    clip_grad_l2norm: 1.0
+    
+    # 分类配置
+    cls_prior_prob: 0.01
+    center_sample: "radius"
+    center_sample_radius: 1.5
+    label_smoothing: 0.2  # 增加标签平滑应对不平衡
+    
+    # 回归配置
+    reg_loss_weight: 1.0
+    cls_loss_weight: 1.0
+    
+    # 正则化
+    dropout: 0.1  # 二分类任务较简单，降低dropout
+    droppath: 0.1
+    
+    # 其他配置
+    head_empty_cls: []
+    train_label_smoothing: 0.2
+    train_center_sample_radius: 1.5
+  
+  # 测试配置
+  test_cfg:
+    pre_nms_thresh: 0.001
+    pre_nms_topk: 2000
+    nms_thresh: 0.6  # 发球动作较少，适当降低
+    post_nms_topk: 100
+    max_per_video: -1
+
+# 优化器配置
+opt:
+  # 学习率配置
+  learning_rate: 0.005  # 二分类任务可以用稍高学习率
+  lr_decay: 0.1
+  lr_gamma: 0.1
+  
+  # 训练配置
+  epochs: 1000  # 二分类任务收敛快，减少epoch
+  warmup_epochs: 100
+  start_epoch: 0
+  
+  # 优化器参数
+  optimizer: "AdamW"
+  weight_decay: 0.0005  # 降低正则化
+  momentum: 0.9
+  
+  # 学习率调度
+  lr_scheduler: "cosine"
+  lr_steps: [30, 60]
+  lr_mults: [0.1, 0.1]
+
+# 数据加载器配置
+loader:
+  batch_size: 32  # 二分类任务简单，可以增大batch size
+  num_workers: 4
+
+# 设备配置
+devices: [0]
+
+# 输出配置
+output_folder: "ckpt_binary_serve"
+init_rand_seed: 42
+
+# 训练打印配置
+print_freq: 5
+
+# 训练集评估配置
+train_eval_split: ["train"]
+train_eval_cfg:
+  eval_freq: 5  # 更频繁评估
+  save_detailed: true
+  max_batches: 2

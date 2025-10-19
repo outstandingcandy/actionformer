@@ -1,0 +1,121 @@
+# ActionFormer config for badminton dataset with SwinV2-384 features
+# 使用SwinV2-Base Transformer特征（1024维，384×384分辨率）
+
+# dataset config
+dataset_name: "badminton_new"
+train_split: ["train"]
+val_split: ["val"]
+test_split: ["val"]
+
+dataset:
+  # 数据路径配置
+  json_file: "data/actionformer_badminton_swinv2_384_25fps/badminton_annotations.json"
+  feat_folder: "data/actionformer_badminton_swinv2_384_25fps/features"
+  file_ext: ".npy"
+  
+  # 数据分割配置
+  split_file: "data/actionformer_badminton_swinv2_384_25fps/splits.json"
+  
+  # 特征配置
+  feat_stride: 1
+  num_frames: 16
+  default_fps: 12.5
+  feat_offset: 8.0
+  
+  # 序列长度限制
+  max_seq_len: 1024
+  
+  # 数据增强
+  input_dim: 1024  # SwinV2-Base 384特征维度 (重要!)
+  num_classes: 12
+  
+  # 其他配置
+  remove_duplicate: false
+  trim_method: "truncate"
+  force_upsampling: false
+
+# model config
+model_name: "LocPointTransformer"
+model:
+  # 基础配置
+  input_dim: 1024  # SwinV2-Base 384特征维度 (重要!)
+  num_classes: 12
+  max_seq_len: 1024
+  
+  # 训练配置
+  train_cfg:
+    # 损失配置
+    init_loss_norm: 1000  # 降低初始loss归一化
+    loss_normalizer_momentum: 0.9
+    
+    # 梯度配置
+    clip_grad_l2norm: 1.0  # 保持梯度裁剪以防止梯度爆炸
+    
+    # 分类配置
+    cls_prior_prob: 0.01
+    center_sample: "radius"
+    center_sample_radius: 1.5
+    label_smoothing: 0.1
+    
+    # 回归配置
+    reg_loss_weight: 1.0
+    cls_loss_weight: 1.0
+    
+    # 其他配置
+    head_empty_cls: []
+    train_label_smoothing: 0.1
+    train_center_sample_radius: 1.5
+  
+  # 测试配置
+  test_cfg:
+    pre_nms_thresh: 0.001
+    pre_nms_topk: 2000
+    nms_thresh: 0.7
+    post_nms_topk: 200
+    max_per_video: -1
+
+# 优化器配置
+opt:
+  # 学习率配置
+  learning_rate: 0.0001  # 小数据集使用小学习率
+  lr_decay: 0.1
+  lr_gamma: 0.1
+  
+  # 训练配置
+  epochs: 150
+  warmup_epochs: 10  # 延长warmup
+  start_epoch: 0
+  
+  # 优化器参数
+  optimizer: "AdamW"
+  weight_decay: 0.0001
+  momentum: 0.9
+  
+  # 学习率调度
+  lr_scheduler: "cosine"
+  lr_steps: [40, 80]
+  lr_mults: [0.1, 0.1]
+
+# 数据加载器配置
+loader:
+  batch_size: 4  # 减小batch size以增加更新频率
+  num_workers: 4
+  pin_memory: true
+  drop_last: true
+
+# 设备配置
+devices: [0]
+
+# 输出配置
+output_folder: "ckpt"
+init_rand_seed: 42
+
+# 训练打印配置
+print_freq: 1  # 每1个batch打印一次
+
+# 训练集评估配置
+train_eval_split: ["train"]
+train_eval_cfg:
+  eval_freq: 5
+  save_detailed: true
+  max_batches: 2  # 只评估前2个batch（8个样本），加快评估速度

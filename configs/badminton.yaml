@@ -1,0 +1,59 @@
+dataset_name: badminton
+train_split: ['training']
+val_split: ['validation']
+# 添加训练集内部评估
+train_eval_split: ['training']
+dataset: {
+  json_file: /home/ubuntu/shuttle-sense/actionformer/data/actionformer_badminton/actionformer_annotations.json,
+  feat_folder: /home/ubuntu/shuttle-sense/actionformer/data/actionformer_badminton/features,
+  file_prefix: badminton_features,
+  file_ext: .npy,
+  num_classes: 11,
+  input_dim: 768,
+  feat_stride: 1,
+  num_frames: 16,
+  trunc_thresh: 0.5,
+  crop_ratio: [0.9, 1.0],
+  max_seq_len: 128,
+  default_fps: 12.5,
+  downsample_rate: 1,
+}
+model: {
+  fpn_type: identity,
+  backbone_arch: [2, 2, 3],  # [embed层, stem层, branch层]
+  regression_range: [
+    [0, 6],     # Level 0: 0-0.48秒 (快速动作)
+    [4, 12],    # Level 1: 0.32-0.96秒 (击球动作)
+    [8, 24],    # Level 2: 1.28-3.84秒 (单次动作序列)
+    [16, 1000], # Level 3: 5.12秒+ (长动作)
+  ],
+  max_buffer_len_factor: 6.0,
+  n_mha_win_size: 9,
+}
+opt: {
+  learning_rate: 0.001,  # Increase learning rate
+  epochs: 1000,            # Train longer
+  weight_decay: 0.0001,  # Reduce weight decay
+}
+loader: {
+  batch_size: 8,
+}
+train_cfg: {
+  init_loss_norm: 2000,     # Increase loss normalization
+  clip_grad_l2norm: 1.0,
+  cls_prior_prob: 0.6,
+  center_sample: radius,
+  center_sample_radius: 1.5,
+  label_smoothing: 0.1,     # Add label smoothing
+}
+test_cfg: {
+  pre_nms_topk: 2000,
+  max_seg_num: 200,
+  min_score: 0.005,       # Set to match actual confidence range
+  multiclass_nms: True,
+  iou_threshold: 0.1,     # Standard IoU threshold
+  nms_method: 'soft',     # Use soft NMS
+  nms_sigma: 0.5,         # NMS sigma parameter
+}
+output_folder: ./ckpt/
+devices: [0]
